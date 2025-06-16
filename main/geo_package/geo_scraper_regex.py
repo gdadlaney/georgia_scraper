@@ -1,4 +1,3 @@
-
 """Website uses version 2 recaptcha"""
 import os, sys
 main_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,6 +22,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseUpload
 from oauth2client.service_account import ServiceAccountCredentials
+import urllib
 
 tracemalloc.start()
 logging.basicConfig(filemode = 'w', format='%(asctime)s - %(message)s', 
@@ -30,7 +30,7 @@ logging.basicConfig(filemode = 'w', format='%(asctime)s - %(message)s',
 
 class GeoScrapper():
     def __init__(self, pages_view, start, end) -> None:
-        self.main_url = "developer will provide public notice link"
+        self.main_url = "https://www.georgiapublicnotice.com/(S(test))/Search.aspx"
         self.page_num = pages_view
         self.process_name = "Foreclosure Data Extraction"
         self.version = '2.1.0'
@@ -61,6 +61,9 @@ class GeoScrapper():
             'City': [],
             'State': [],
             'Zipcode': [],
+            'Loopnet Search': [],
+            'Crexi Search': [],
+            'Zillow Search': [],
         })
 
         self.start_date = start
@@ -241,6 +244,7 @@ class GeoScrapper():
         auction_date = await self.auction_date(date)
         logging.info(f"{self.color_text['blue']}{auction_date}{self.color_text['reset']}")
 
+        full_address = f"{street_address}, {city}, {state} {zipcode}"
 
         new_data = {
             'First name': parsed_name_tuple[0],
@@ -252,6 +256,9 @@ class GeoScrapper():
             'City': city,
             'State': state,
             'Zipcode': zipcode,
+            'Loopnet Search': self.create_google_search_url("loopnet.com", full_address),
+            'Crexi Search': self.create_google_search_url("crexi.com", full_address),
+            'Zillow Search': self.create_google_search_url("zillow.com", full_address)
         }
 
         # Convert new_data to a DataFrame
@@ -262,6 +269,8 @@ class GeoScrapper():
 
 
     async def clean_dataframe(self):
+        logging.info(f"Dataframe before cleaning:{self.data_frame.shape[0]} rows and {self.data_frame.shape[1]} columns")
+
         # Remove rows where "Property Address" is None or both "First name" and "Last name" are both None
         self.data_frame = self.data_frame.dropna(subset=["Property Address"], how="all")
         self.data_frame = self.data_frame.dropna(subset=["First name", "Last name"], how="all")
@@ -452,17 +461,26 @@ class GeoScrapper():
         logging.info("Updated All cells with values")
         await self.set_hyperlink(worksheet)
         # Format headers in bold
-        worksheet.format('A1:I1', {'textFormat': {'bold': True}})
+        worksheet.format('A1:L1', {'textFormat': {'bold': True}})
         logging.info("Bold Letters")
         worksheet.columns_auto_resize(0,8)
         return spreadsheet.url
-        
+
+    def create_google_search_url(self, site, address):
+        if not address:
+            return ""
+        # Create full address string
+        full_address = f"{address}"
+        # URL encode the search query
+        encoded_query = urllib.parse.quote(f'site:{site} "{full_address}"')
+        return f'https://www.google.com/search?q={encoded_query}'
 
     async def main(self):
         async with async_playwright() as p:
                 logging.info(f"{self.color_text['magenta']}=======Playwright Extractor Bot Starting======={self.color_text['reset']}")
                 start = time.time()
-                browser = await p.chromium.launch(headless=False, slow_mo=50)
+                # browser = await p.chromium.launch(headless=False, slow_mo=50)
+                browser = await p.firefox.launch(headless=False, slow_mo=50)
                 context = await browser.new_context()
                 self.page = await context.new_page()
                 """Web methods starts here"""
