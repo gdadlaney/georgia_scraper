@@ -54,7 +54,7 @@ class GeoScrapper():
         self.data_frame = pd.DataFrame({
             'First name': [],
             'Last name': [],
-            'Mortgage Balance': [],
+            'Mortgage Balance': [],         "original principal amount of $195,000.00"
             'Auction Date':[],
             'Link to Foreclosure':[],
             'Property Address': [],
@@ -277,6 +277,11 @@ class GeoScrapper():
         # Replace "Georgia" with "GA" in the "State" column
         self.data_frame["State"] = self.data_frame["State"].replace("Georgia", "GA")
         logging.info(f"Resulting Dataframe:{self.color_text['gray']} {self.data_frame}{self.color_text['reset']}")
+
+    async def get_deed_book(self, text):
+        """Deed Book 2879 page 302-311"""
+        # todo: page could be a single value or a numeric range
+
 
     async def get_address(self, text):
         max_characters = 60
@@ -539,6 +544,10 @@ class ForeclosureDataUI(QWidget):
         self.end_date_edit.setFont(font)
         self.end_date_edit.setCalendarPopup(True)
         self.end_date_edit.setDate(QDate.currentDate())
+
+        # todo: add an input for county. Just one is fine
+
+        # full address is fine.
 
         self.start_automation_button = QPushButton("Start Automation", self)
         self.start_automation_button.setFont(font)
